@@ -22,9 +22,11 @@ void resize();
 void add_message(char *message, size_t len_msg);
 void render_ui(char *msg);
 
-void getWindowsSize(int *row, int *col) {
+void getWindowsSize(int *row, int *col)
+{
     struct winsize ws;
-    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1) {
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == -1)
+    {
         perror("ioctl");
         return;
     }
@@ -53,8 +55,8 @@ void message_init()
 
 void reorganize()
 {
-    char **temp_buff = (char **)malloc(sizeof(msg_l.buff));
-    memcpy(temp_buff, msg_l.buff, sizeof(msg_l.buff));
+    char **temp_buff = (char **)malloc(sizeof(char *) * msg_l.capacity);
+    memcpy(temp_buff, msg_l.buff, sizeof(char *) * msg_l.capacity);
     int i = 0, j = msg_l.start;
     do
     {
@@ -112,7 +114,7 @@ void print_all_message()
 
 void render_ui(char *msg)
 {
-    int _term_w, _term_h;
+    int _term_w = 0, _term_h = 0;
     getWindowsSize(&_term_h, &_term_w);
 
     if (_term_h != term_h || _term_w != term_w)
@@ -121,7 +123,7 @@ void render_ui(char *msg)
         term_w = _term_w;
         resize();
     }
-    
+
     setvbuf(stdout, NULL, _IOFBF, 2 * term_w * term_h); // set buffer to 2 times of terminal size
     printf("\033[%d;1H\033[K", msg_l.capacity);
 

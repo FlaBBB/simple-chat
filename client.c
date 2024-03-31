@@ -6,7 +6,7 @@ int hold_flag = 0;
 
 void *receiver(void *arg)
 {
-    int sock = *(int *)arg;
+    int sock = (int)(intptr_t)arg;
     char rbuffer[BUFFER_SIZE] = {0};
     while (1)
     {
@@ -27,7 +27,7 @@ void *receiver(void *arg)
 
 int main(int argc, char const *argv[])
 {
-    int sock = 0, valread, client_fd;
+    int sock = 0, client_fd;
     struct sockaddr_in serv_addr;
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
     {
@@ -54,7 +54,8 @@ int main(int argc, char const *argv[])
     fgets(buffer, BUFFER_SIZE, stdin);
 
     int err = send_message(sock, buffer, strlen(buffer) - 1);
-    if (err) {
+    if (err)
+    {
         perror("write() failed");
         exit(err);
     }
@@ -64,14 +65,16 @@ int main(int argc, char const *argv[])
     message_init();
 
     pthread_t tid;
-    pthread_create(&tid, NULL, receiver, (void *)&sock);
+    pthread_create(&tid, NULL, receiver, (void *)(intptr_t)sock);
 
-    while (1) {
+    while (1)
+    {
         memset(buffer, 0, BUFFER_SIZE);
         l_buffer = get_input_noncanon(buffer, BUFFER_SIZE, &hold_flag);
 
         int err = send_message(sock, buffer, l_buffer);
-        if (err) {
+        if (err)
+        {
             perror("write() failed");
             exit(err);
         }

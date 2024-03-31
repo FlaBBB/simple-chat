@@ -43,7 +43,7 @@ void broadcast_message(int con, char *msg1, size_t l_msg1, char *msg2, size_t l_
 
 void *handle_connection(void *__ncon)
 {
-    int ncon = (int)__ncon;
+    int ncon = (int)(intptr_t)__ncon;
     int new_socket = connections.sockets[ncon];
 
     char rbuffer[BUFFER_SIZE];
@@ -172,7 +172,7 @@ int main(int argc, char **argv)
 
         pthread_mutex_lock(&lock);
         connections.sockets[num_con] = new_socket;
-        pthread_create(&connections.threads[num_con], NULL, handle_connection, (void *)num_con);
+        pthread_create(&connections.threads[num_con], NULL, handle_connection, (void *)(intptr_t)num_con);
         num_con++;
         pthread_mutex_unlock(&lock);
     }

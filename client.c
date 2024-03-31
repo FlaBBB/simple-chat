@@ -10,6 +10,8 @@ void *receiver(void *arg)
     char rbuffer[BUFFER_SIZE] = {0};
     while (1)
     {
+        memset(rbuffer, 0, BUFFER_SIZE);
+
         int err = receive_message(sock, rbuffer, BUFFER_SIZE);
         if (err < 0)
         {

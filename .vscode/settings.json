@@ -1,0 +1,30 @@
+{
+    "files.associations": {
+        "*.sage": "python",
+        "cerrno": "cpp",
+        "array": "cpp",
+        "deque": "cpp",
+        "string": "cpp",
+        "unordered_map": "cpp",
+        "vector": "cpp",
+        "string_view": "cpp",
+        "initializer_list": "cpp",
+        "message_builder.h": "c",
+        "term.h": "c",
+        "unistd.h": "c",
+        "socket.h": "c",
+        "server.h": "c",
+        "typeinfo": "c",
+        "inet.h": "c",
+        "pthread.h": "c",
+        "string.h": "c",
+        "io_helpers.h": "c",
+        "io_socket.h": "c",
+        "client.h": "c",
+        "stdlib.h": "c",
+        "parser.h": "c",
+        "stdio.h": "c",
+        "termios.h": "c"
+    },
+    "C_Cpp.errorSquiggles": "disabled"
+}

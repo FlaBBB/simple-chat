@@ -29,6 +29,16 @@ void *receiver(void *arg)
 
 int main(int argc, char const *argv[])
 {
+    // check argument
+    if (argc < 3)
+    {
+        printf("Usage: %s <address> <port>\n", argv[0]);
+        return -1;
+    }
+
+    const char *address = argv[1];
+    int port = atoi(argv[2]);
+
     int sock = 0, client_fd;
     struct sockaddr_in serv_addr;
     if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
@@ -38,9 +48,9 @@ int main(int argc, char const *argv[])
     }
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(PORT);
+    serv_addr.sin_port = htons(port);
 
-    if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
+    if (inet_pton(AF_INET, address, &serv_addr.sin_addr) <= 0)
     {
         printf("\nInvalid address/ Address not supported \n");
         return -1;

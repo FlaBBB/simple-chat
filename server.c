@@ -113,6 +113,15 @@ void *handle_connection(void *__ncon)
 
 int main(int argc, char **argv)
 {
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    if (argc < 2) {
+        printf("Usage: %s <port>\n", argv[0]);
+        return -1;
+    }
+
+    int port = atoi(argv[1]);
+
     int new_socket;
     struct sockaddr_in address;
     int opt = 1;
@@ -132,7 +141,7 @@ int main(int argc, char **argv)
 
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
+    address.sin_port = htons(port);
 
     if (bind(server_fd, (struct sockaddr *)&address, sizeof(address)) < 0)
     {
@@ -150,7 +159,7 @@ int main(int argc, char **argv)
     connections.sockets = (int *)malloc(sizeof(int) * connections.size);
     connections.name = (char **)malloc(sizeof(char *) * connections.size);
 
-    puts("listening");
+    printf("listening with port %d...\n", port);
 
     signal(SIGINT, int_handler);
 
@@ -164,10 +173,12 @@ int main(int argc, char **argv)
 
         if (num_con >= connections.size)
         {
+            pthread_mutex_lock(&lock);
             connections.size *= 2;
             connections.threads = (pthread_t *)realloc(connections.threads, sizeof(pthread_t) * connections.size);
             connections.sockets = (int *)realloc(connections.sockets, sizeof(int) * connections.size);
             connections.name = (char **)realloc(connections.name, sizeof(char *) * connections.size);
+            pthread_mutex_unlock(&lock);
         }
 
         pthread_mutex_lock(&lock);

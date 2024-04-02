@@ -5,4 +5,3 @@
 #include <string.h>
 
 #define BUFFER_SIZE 4096
-#define PORT 12442

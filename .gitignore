@@ -57,3 +57,5 @@ dkms.conf
 
 # End of https://www.toptal.com/developers/gitignore/api/c
 out/*
+
+*.gdb_history

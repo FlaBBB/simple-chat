@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <termios.h>
 #include <sys/ioctl.h>
+#include "../tools/string_helpers.h"
 
 typedef struct
 {
@@ -16,11 +17,6 @@ typedef struct
 
 int term_w, term_h;
 msg_layout msg_l;
-
-void message_init();
-void resize();
-void add_message(char *message, size_t len_msg);
-void render_ui(char *msg);
 
 void getWindowsSize(int *row, int *col)
 {
@@ -43,7 +39,13 @@ void clear_screen()
 void message_init()
 {
     getWindowsSize(&term_h, &term_w);
-    msg_l.buff = (char **)malloc(sizeof(char *) * (term_h - 1));
+    msg_l.buff = malloc(sizeof(*msg_l.buff) * (term_h - 1));
+    if (msg_l.buff == NULL)
+    {
+        printf("memory allocation failed");
+        exit(1);
+    }
+
     msg_l.start = 0;
     msg_l.end = 0;
     msg_l.capacity = (term_h - 1);
@@ -53,33 +55,68 @@ void message_init()
     printf("\033[%d;1HInput your message> ", msg_l.capacity + 1);
 }
 
-void reorganize()
-{
-    char **temp_buff = (char **)malloc(sizeof(char *) * msg_l.capacity);
-    memcpy(temp_buff, msg_l.buff, sizeof(char *) * msg_l.capacity);
-    int i = 0, j = msg_l.start;
-    do
-    {
-        free(msg_l.buff[i]);
-        size_t lbuff = strlen(temp_buff[j]);
-        msg_l.buff[i] = (char *)malloc(sizeof(char) * lbuff);
-        memcpy(msg_l.buff[i], temp_buff[j], sizeof(char) * lbuff);
-        j = (j + 1) % msg_l.capacity;
-    } while (j != msg_l.end);
-}
-
 void resize()
 {
     clear_screen();
 
-    // reorganize if the message not sorted perfectly
-    if (msg_l.end < msg_l.start)
-        reorganize();
-    if (term_h - 1 > msg_l.capacity)
-        msg_l.isFull = 0;
+    // make the start ~> end is less or equals with (term_h - 1)
+    if (term_h - 1 < ((unsigned int)((msg_l.end - 1) - msg_l.start)) % msg_l.capacity + 1)
+        msg_l.start = ((unsigned int)(msg_l.end - term_h)) % msg_l.capacity;
 
-    msg_l.capacity = (term_h - 1);
-    msg_l.buff = (char **)realloc(msg_l.buff, sizeof(char *) * msg_l.capacity);
+    char **temp = malloc(sizeof(char*) * msg_l.capacity);
+
+    for (size_t i = 0; i < msg_l.capacity; i++) {
+        temp[i] = msg_l.buff[i];
+    }
+
+    // free_string_array(msg_l.buff, msg_l.capacity); // freeing arrays string (something wrong here)
+    // free(msg_l.buff);
+
+    // msg_l.buff = malloc(sizeof(char*) * (term_h - 1));
+    msg_l.buff = realloc(msg_l.buff, sizeof(char*) * (term_h - 1));
+    if (msg_l.buff == NULL)
+    {
+        printf("memory allocation failed");
+        exit(1);
+    }
+
+    unsigned int i = 0, j = msg_l.start, e = msg_l.end;
+    size_t len_msg;
+
+    // got memory leak inside the loops
+    do
+    {
+        assert(temp[j] != NULL);
+
+        len_msg = strlen(temp[j]);
+
+        // printf("[DEBUG] ptr: %p -> %p", &msg_l.buff[i], msg_l.buff[i]);
+
+        // msg_l.buff[i] = malloc((len_msg + 1) * sizeof(*msg_l.buff[i])); // got memory leak
+        // if (msg_l.buff[i] == NULL)
+        // {
+        //     printf("memory allocation failed");
+        //     exit(1);
+        // }
+
+        // memcpy(msg_l.buff[i], temp[j], len_msg);
+
+        msg_l.buff[i] = temp[j];
+        
+        msg_l.buff[i++][len_msg] = '\0';
+
+        j = ((unsigned int)(j + 1)) % msg_l.capacity;
+    } while (j != e);
+
+    // free_string_array(temp, msg_l.capacity);
+    free(temp);
+
+    if (msg_l.capacity < term_h - 1)
+        msg_l.isFull = 0;
+    msg_l.capacity = term_h - 1;
+
+    msg_l.start = 0;
+    msg_l.end = i % msg_l.capacity;
 }
 
 void add_message(char *message, size_t len_msg)
@@ -88,23 +125,29 @@ void add_message(char *message, size_t len_msg)
     // if it is full, remove the oldest message
     if (msg_l.isFull)
     {
-        msg_l.start = (msg_l.start + 1) % msg_l.capacity;
+        msg_l.start = ((unsigned int)(msg_l.start + 1)) % msg_l.capacity;
         free(msg_l.buff[msg_l.end]);
     }
 
-    msg_l.buff[msg_l.end] = (char *)malloc(sizeof(char) * (len_msg + 1));
-    memcpy(msg_l.buff[msg_l.end], message, sizeof(char) * len_msg);
+    msg_l.buff[msg_l.end] = malloc((len_msg + 1) * sizeof(*msg_l.buff[msg_l.end]));
+    if (msg_l.buff[msg_l.end] == NULL)
+    {
+        printf("memory allocation failed");
+        exit(1);
+    }
+
+    memcpy(msg_l.buff[msg_l.end], message, len_msg);
     msg_l.buff[msg_l.end][len_msg] = '\0';
 
-    if (!msg_l.isFull && msg_l.end == msg_l.capacity - 1)
+    if (msg_l.isFull == 0 && msg_l.end == msg_l.capacity - 1)
         msg_l.isFull = 1;
 
-    msg_l.end = (msg_l.end + 1) % msg_l.capacity;
+    msg_l.end = ((unsigned int)(msg_l.end + 1)) % msg_l.capacity;
 }
 
 void print_all_message()
 {
-    int i = msg_l.start, e = msg_l.end;
+    unsigned int i = msg_l.start, e = msg_l.end;
     do
     {
         printf("%s\033[K\n", msg_l.buff[i]);

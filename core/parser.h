@@ -34,7 +34,7 @@ int32_t receive_message(int fd, char *buff, size_t buff_size)
     return 0;
 }
 
-int32_t  send_message(int fd, char *buff, size_t length_buff)
+int32_t send_message(int fd, char *buff, size_t length_buff)
 {
     errno = 0;
     char wbuff[2 + length_buff];

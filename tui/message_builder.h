@@ -5,14 +5,15 @@
 #include <termios.h>
 #include <sys/ioctl.h>
 #include "../tools/string_helpers.h"
+#include <sys/param.h>
 
 typedef struct
 {
     char **buff;
     unsigned int start;
     unsigned int end;
+    unsigned int size;
     unsigned int capacity;
-    int isFull;
 } msg_layout;
 
 int term_w, term_h;
@@ -46,75 +47,51 @@ void message_init()
         exit(1);
     }
 
+    msg_l.capacity = (term_h - 1);
+    msg_l.size = 0;
     msg_l.start = 0;
     msg_l.end = 0;
-    msg_l.capacity = (term_h - 1);
-    msg_l.isFull = 0;
 
     clear_screen();
     printf("\033[%d;1HInput your message> ", msg_l.capacity + 1);
 }
 
-void resize()
+void checkNResize()
 {
+    int _term_w = 0, _term_h = 0;
+    getWindowsSize(&_term_h, &_term_w);
+
+    if (!(_term_h != term_h || _term_w != term_w))
+    {
+        return;
+    }
+    term_h = _term_h;
+    term_w = _term_w;
+
     clear_screen();
 
     // make the start ~> end is less or equals with (term_h - 1)
-    if (term_h - 1 < ((unsigned int)((msg_l.end - 1) - msg_l.start)) % msg_l.capacity + 1)
-        msg_l.start = ((unsigned int)(msg_l.end - term_h)) % msg_l.capacity;
-
-    char **temp = malloc(sizeof(char*) * msg_l.capacity);
-
-    for (size_t i = 0; i < msg_l.capacity; i++) {
-        temp[i] = msg_l.buff[i];
-    }
-
-    // free_string_array(msg_l.buff, msg_l.capacity); // freeing arrays string (something wrong here)
-    // free(msg_l.buff);
-
-    // msg_l.buff = malloc(sizeof(char*) * (term_h - 1));
-    msg_l.buff = realloc(msg_l.buff, sizeof(char*) * (term_h - 1));
-    if (msg_l.buff == NULL)
+    int new_capacity = term_h - 1;
+    if (new_capacity < msg_l.size)
     {
-        printf("memory allocation failed");
-        exit(1);
+        msg_l.start = (msg_l.start + msg_l.size - new_capacity) % msg_l.capacity;
+        msg_l.size = new_capacity;
     }
+
+    char **new_buff = malloc(sizeof(char *) * new_capacity);
 
     unsigned int i = 0, j = msg_l.start, e = msg_l.end;
-    size_t len_msg;
-
-    // got memory leak inside the loops
     do
     {
-        assert(temp[j] != NULL);
+        new_buff[i++] = msg_l.buff[j];
 
-        len_msg = strlen(temp[j]);
-
-        // printf("[DEBUG] ptr: %p -> %p", &msg_l.buff[i], msg_l.buff[i]);
-
-        // msg_l.buff[i] = malloc((len_msg + 1) * sizeof(*msg_l.buff[i])); // got memory leak
-        // if (msg_l.buff[i] == NULL)
-        // {
-        //     printf("memory allocation failed");
-        //     exit(1);
-        // }
-
-        // memcpy(msg_l.buff[i], temp[j], len_msg);
-
-        msg_l.buff[i] = temp[j];
-        
-        msg_l.buff[i++][len_msg] = '\0';
-
-        j = ((unsigned int)(j + 1)) % msg_l.capacity;
+        j = (j + 1) % msg_l.capacity;
     } while (j != e);
 
-    // free_string_array(temp, msg_l.capacity);
-    free(temp);
+    free(msg_l.buff);
 
-    if (msg_l.capacity < term_h - 1)
-        msg_l.isFull = 0;
-    msg_l.capacity = term_h - 1;
-
+    msg_l.buff = new_buff;
+    msg_l.capacity = new_capacity;
     msg_l.start = 0;
     msg_l.end = i % msg_l.capacity;
 }
@@ -123,10 +100,10 @@ void add_message(char *message, size_t len_msg)
 {
     // check if the message layout is full
     // if it is full, remove the oldest message
-    if (msg_l.isFull)
+    if (msg_l.size == msg_l.capacity)
     {
+        free(msg_l.buff[msg_l.start]);
         msg_l.start = ((unsigned int)(msg_l.start + 1)) % msg_l.capacity;
-        free(msg_l.buff[msg_l.end]);
     }
 
     msg_l.buff[msg_l.end] = malloc((len_msg + 1) * sizeof(*msg_l.buff[msg_l.end]));
@@ -139,8 +116,9 @@ void add_message(char *message, size_t len_msg)
     memcpy(msg_l.buff[msg_l.end], message, len_msg);
     msg_l.buff[msg_l.end][len_msg] = '\0';
 
-    if (msg_l.isFull == 0 && msg_l.end == msg_l.capacity - 1)
-        msg_l.isFull = 1;
+    if (msg_l.size < msg_l.capacity) {
+        msg_l.size++;
+    }
 
     msg_l.end = ((unsigned int)(msg_l.end + 1)) % msg_l.capacity;
 }
@@ -157,16 +135,6 @@ void print_all_message()
 
 void render_ui(char *msg)
 {
-    int _term_w = 0, _term_h = 0;
-    getWindowsSize(&_term_h, &_term_w);
-
-    if (_term_h != term_h || _term_w != term_w)
-    {
-        term_h = _term_h;
-        term_w = _term_w;
-        resize();
-    }
-
     setvbuf(stdout, NULL, _IOFBF, 2 * term_w * term_h); // set buffer to 2 times of terminal size
     printf("\033[%d;1H\033[K", msg_l.capacity);
 

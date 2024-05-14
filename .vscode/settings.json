@@ -27,5 +27,5 @@
         "termios.h": "c",
         "system_error": "c"
     },
-    "C_Cpp.errorSquiggles": "disabled"
+    "C_Cpp.errorSquiggles": "enabled"
 }

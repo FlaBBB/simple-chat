@@ -19,6 +19,7 @@ void *receiver(void *arg)
             exit(err);
         }
 
+        checkNResize();
         add_message(rbuffer, strlen(rbuffer));
 
         hold_flag = 1;
